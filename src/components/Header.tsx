@@ -1,8 +1,24 @@
+import Link from "next/link";
+
 const Header = () => (
-    <header className="bg-blue-600 text-white p-4">
-      <h1 className="text-2xl">Typing Speed Test</h1>
-    </header>
-  );
-  
-  export default Header;
-  
+  <header className="bg-white shadow-md">
+    <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+      <Link
+        href="/"
+        className="text-3xl font-bold text-blue-600 hover:text-blue-700 transition duration-300"
+      >
+        Typo
+      </Link>
+      <nav>
+        <Link
+          href="/test"
+          className="text-lg font-semibold text-gray-700 hover:text-blue-600 transition duration-300"
+        >
+          Test Your Speed
+        </Link>
+      </nav>
+    </div>
+  </header>
+);
+
+export default Header;
