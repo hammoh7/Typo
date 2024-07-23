@@ -5,20 +5,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const generateRandomSentence = () => {
-  const sentences = [
-    "The quick brown fox jumps over the lazy dog.",
-    "A journey of a thousand miles begins with a single step.",
-    "To be or not to be, that is the question.",
-    "All that glitters is not gold.",
-    "Where there's a will, there's a way.",
-  ];
-  return sentences[Math.floor(Math.random() * sentences.length)];
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY as string);
+
+const generateRandomSentence = async () => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const prompt = "Generate two random sentences that are interesting and varied in topic. The sentences should be connected and form a coherent thought.";
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text().replace(/\n/g, ' ').trim();
+  } catch (error) {
+    console.error("Error generating sentence:", error);
+    return "An error occurred while generating the sentence. Please try again.";
+  }
 };
 
 export default function Test() {
-  const [sentence, setSentence] = useState(generateRandomSentence());
+  const [sentence, setSentence] = useState("");
   const [input, setInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(60);
   const [isStarted, setIsStarted] = useState(false);
@@ -26,8 +31,10 @@ export default function Test() {
   const [totalWords, setTotalWords] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [isCountingDown, setIsCountingDown] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [completedWords, setCompletedWords] = useState(0);
 
   useEffect(() => {
     if (isCountingDown && countdown > 0) {
@@ -54,32 +61,56 @@ export default function Test() {
   }, [isStarted, timeLeft]);
 
   useEffect(() => {
-    if (input === sentence) {
-      setTotalWords(totalWords + sentence.split(" ").length);
-      setSentence(generateRandomSentence());
+    const words = sentence.split(' ');
+    const inputWords = input.trim().split(' ');
+    let completedWordCount = 0;
+
+    for (let i = 0; i < inputWords.length; i++) {
+      if (inputWords[i] === words[i]) {
+        completedWordCount++;
+      } else {
+        break;
+      }
+    }
+
+    setCompletedWords(completedWordCount);
+
+    if (input.trim() === sentence.trim()) {
+      setTotalWords(totalWords + completedWordCount);
+      setIsLoading(true);
+      generateRandomSentence().then((newSentence) => {
+        setSentence(newSentence);
+        setIsLoading(false);
+      });
       setInput("");
+      setCompletedWords(0);
     }
   }, [input, sentence]);
 
-  const startCountdown = () => {
+  const startCountdown = async () => {
     setIsCountingDown(true);
     setCountdown(3);
+    setIsLoading(true);
+    const initialSentence = await generateRandomSentence();
+    setSentence(initialSentence);
+    setIsLoading(false);
   };
 
   const startTest = () => {
     setIsStarted(true);
     setTimeLeft(60);
-    setSentence(generateRandomSentence());
     setInput("");
     setWpm(null);
     setTotalWords(0);
+    setCompletedWords(0);
     setStartTime(new Date());
   };
 
   const calculateFinalWpm = () => {
     if (startTime) {
       const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
-      setWpm(Math.round(totalWords / timeElapsed));
+      const finalWords = totalWords + completedWords;
+      setWpm(Math.round(finalWords / timeElapsed));
     }
   };
 
@@ -175,7 +206,11 @@ export default function Test() {
             isStarted && (
               <>
                 <div className="mb-6 text-xl font-mono bg-gray-100 p-6 rounded-lg leading-relaxed">
-                  {renderSentence()}
+                  {isLoading ? (
+                    <div className="text-center">Loading new sentence...</div>
+                  ) : (
+                    renderSentence()
+                  )}
                 </div>
                 <input
                   type="text"
@@ -183,12 +218,12 @@ export default function Test() {
                   onChange={handleInputChange}
                   className="border-2 border-blue-300 p-4 w-full rounded-lg mb-6 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                   placeholder="Start typing..."
-                  disabled={!isStarted}
+                  disabled={!isStarted || isLoading}
                   autoFocus
                 />
                 <div className="flex justify-between items-center">
                   <div className="text-lg font-semibold text-gray-700">
-                    Words: {totalWords}
+                    Words: {totalWords + completedWords}
                   </div>
                   <div className="text-2xl font-bold text-blue-600">
                     Time Left: {timeLeft}s
