@@ -35,6 +35,8 @@ export default function Test() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [completedWords, setCompletedWords] = useState(0);
+  const keyPressAudios = useRef<HTMLAudioElement[]>([]);
+  const keyReturnAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (isCountingDown && countdown > 0) {
@@ -87,6 +89,17 @@ export default function Test() {
     }
   }, [input, sentence]);
 
+  useEffect(() => {
+    keyPressAudios.current = [
+      new Audio("/key1.mp3"),
+    ];
+    keyReturnAudio.current = new Audio("/key-return.mp3");
+
+    // Preload audio files
+    keyPressAudios.current.forEach(audio => audio.load());
+    keyReturnAudio.current.load();
+  }, []);
+
   const startCountdown = async () => {
     setIsCountingDown(true);
     setCountdown(3);
@@ -111,6 +124,28 @@ export default function Test() {
       const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
       const finalWords = totalWords + completedWords;
       setWpm(Math.round(finalWords / timeElapsed));
+    }
+  };
+
+  const playKeySound = (key: string) => {
+    if (key === "Enter" || key === " ") {
+      if (keyReturnAudio.current) {
+        keyReturnAudio.current.currentTime = 0;
+        keyReturnAudio.current.play();
+      }
+    } else {
+      const randomIndex = Math.floor(Math.random() * keyPressAudios.current.length);
+      const audio = keyPressAudios.current[randomIndex];
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isStarted && !isLoading) {
+      playKeySound(e.key);
     }
   };
 
@@ -216,6 +251,7 @@ export default function Test() {
                   type="text"
                   value={input}
                   onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
                   className="border-2 border-blue-300 p-4 w-full rounded-lg mb-6 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                   placeholder="Start typing..."
                   disabled={!isStarted || isLoading}
