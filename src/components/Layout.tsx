@@ -1,8 +1,9 @@
-"use client"; 
+"use client";
 
-import React, { useState } from 'react';
-import Header from './Header';
-import Footer from './Footer';
+import React, { useState } from "react";
+import Header from "./Header";
+import Footer from "./Footer";
+import ThemeToggleIcon from "./ThemeToogleIcon";
 
 const themes = {
   light: {
@@ -24,12 +25,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className={`${theme.background} min-h-screen flex flex-col`}>
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center px-4 py-8">
-        <button
-          onClick={() => setTheme(theme === themes.light ? themes.dark : themes.light)}
-          className={`py-2 px-4 rounded ${theme.button} text-lg`}
-        >
-          Toggle Theme
-        </button>
+        <ThemeToggleIcon
+          isDarkMode={theme === themes.dark}
+          onClick={() =>
+            setTheme(theme === themes.light ? themes.dark : themes.light)
+          }
+        />
         {children}
       </main>
       <Footer />
