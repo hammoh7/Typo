@@ -7,15 +7,31 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY as string);
+const genAI = new GoogleGenerativeAI(
+  process.env.NEXT_PUBLIC_GEMINI_API_KEY as string
+);
+
+const themes = {
+  light: {
+    background: "bg-white",
+    text: "text-gray-800",
+    button: "bg-blue-600 text-white",
+  },
+  dark: {
+    background: "bg-gray-900",
+    text: "text-gray-200",
+    button: "bg-gray-700 text-white",
+  },
+};
 
 const generateRandomSentence = async () => {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const prompt = "Generate two random sentences that are interesting and varied in topic. The sentences should be connected and form a coherent thought.";
+    const prompt =
+      "Generate two random sentences that are interesting and varied in topic. The sentences should be connected and form a coherent thought.";
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text().replace(/\n/g, ' ').trim();
+    return response.text().replace(/\n/g, " ").trim();
   } catch (error) {
     console.error("Error generating sentence:", error);
     return "An error occurred while generating the sentence. Please try again.";
@@ -23,6 +39,7 @@ const generateRandomSentence = async () => {
 };
 
 export default function Test() {
+  const [theme, setTheme] = useState(themes.light);
   const [sentence, setSentence] = useState("");
   const [input, setInput] = useState("");
   const [timeLeft, setTimeLeft] = useState(60);
@@ -37,6 +54,7 @@ export default function Test() {
   const [completedWords, setCompletedWords] = useState(0);
   const keyPressAudios = useRef<HTMLAudioElement[]>([]);
   const keyReturnAudio = useRef<HTMLAudioElement | null>(null);
+  const [errors, setErrors] = useState(0);
 
   useEffect(() => {
     if (isCountingDown && countdown > 0) {
@@ -63,8 +81,8 @@ export default function Test() {
   }, [isStarted, timeLeft]);
 
   useEffect(() => {
-    const words = sentence.split(' ');
-    const inputWords = input.trim().split(' ');
+    const words = sentence.split(" ");
+    const inputWords = input.trim().split(" ");
     let completedWordCount = 0;
 
     for (let i = 0; i < inputWords.length; i++) {
@@ -90,13 +108,11 @@ export default function Test() {
   }, [input, sentence]);
 
   useEffect(() => {
-    keyPressAudios.current = [
-      new Audio("/key1.mp3"),
-    ];
+    keyPressAudios.current = [new Audio("/key1.mp3")];
     keyReturnAudio.current = new Audio("/key-return.mp3");
 
     // Preload audio files
-    keyPressAudios.current.forEach(audio => audio.load());
+    keyPressAudios.current.forEach((audio) => audio.load());
     keyReturnAudio.current.load();
   }, []);
 
@@ -134,7 +150,9 @@ export default function Test() {
         keyReturnAudio.current.play();
       }
     } else {
-      const randomIndex = Math.floor(Math.random() * keyPressAudios.current.length);
+      const randomIndex = Math.floor(
+        Math.random() * keyPressAudios.current.length
+      );
       const audio = keyPressAudios.current[randomIndex];
       if (audio) {
         audio.currentTime = 0;
@@ -150,7 +168,15 @@ export default function Test() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    const value = e.target.value;
+    const newErrors = value.split("").reduce((acc, char, index) => {
+      if (char !== sentence[index]) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
+    setErrors(newErrors);
+    setInput(value);
   };
 
   const renderSentence = () => {
@@ -184,7 +210,7 @@ export default function Test() {
           </p>
           <div className="flex justify-center space-x-4">
             <button
-              className="bg-blue-600 text-white py-3 px-6 rounded-full text-lg font-semibold hover:bg-blue-700 transition duration-300 transform hover:scale-105"
+              className={`py-2 px-4 rounded ${theme.button} text-lg`}
               onClick={startCountdown}
             >
               Try Again
@@ -202,9 +228,15 @@ export default function Test() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className={`${theme.background} min-h-screen flex flex-col`}>
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center px-4 py-8">
+        <button
+          onClick={() => setTheme(theme === themes.light ? themes.dark : themes.light)}
+          className={`py-2 px-4 rounded ${theme.button} text-lg mb-4`}
+        >
+          Toggle Theme
+        </button>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -231,7 +263,7 @@ export default function Test() {
                 Challenge yourself and improve your typing skills!
               </p>
               <button
-                className="bg-blue-600 text-white py-3 px-8 rounded-full text-xl font-semibold hover:bg-blue-700 transition duration-300 transform hover:scale-105"
+                className={`py-2 px-8 rounded ${theme.button} text-xl font-semibold hover:bg-blue-700 transition duration-300 transform hover:scale-105`}
                 onClick={startCountdown}
               >
                 Start Typing Test
@@ -259,7 +291,14 @@ export default function Test() {
                 />
                 <div className="flex justify-between items-center">
                   <div className="text-lg font-semibold text-gray-700">
-                    Words: {totalWords + completedWords}
+                    Words: {totalWords}
+                  </div>
+                  <div className="text-lg font-semibold text-gray-700">
+                    Accuracy:{" "}
+                    {Math.max(0, 100 - (errors / input.length) * 100).toFixed(
+                      2
+                    )}
+                    %
                   </div>
                   <div className="text-2xl font-bold text-blue-600">
                     Time Left: {timeLeft}s
