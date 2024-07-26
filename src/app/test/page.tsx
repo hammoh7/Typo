@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import ThemeToggleIcon from "@/components/ThemeToogleIcon";
 
 const genAI = new GoogleGenerativeAI(
   process.env.NEXT_PUBLIC_GEMINI_API_KEY as string
@@ -111,7 +112,6 @@ export default function Test() {
     keyPressAudios.current = [new Audio("/key1.mp3")];
     keyReturnAudio.current = new Audio("/key-return.mp3");
 
-    // Preload audio files
     keyPressAudios.current.forEach((audio) => audio.load());
     keyReturnAudio.current.load();
   }, []);
@@ -231,12 +231,12 @@ export default function Test() {
     <div className={`${theme.background} min-h-screen flex flex-col`}>
       <Header />
       <main className="flex-grow flex flex-col items-center justify-center px-4 py-8">
-        <button
-          onClick={() => setTheme(theme === themes.light ? themes.dark : themes.light)}
-          className={`py-2 px-4 rounded ${theme.button} text-lg mb-4`}
-        >
-          Toggle Theme
-        </button>
+        <ThemeToggleIcon
+          isDarkMode={theme === themes.dark}
+          onClick={() =>
+            setTheme(theme === themes.light ? themes.dark : themes.light)
+          }
+        />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
