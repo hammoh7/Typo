@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ThemeToggleIcon from "@/components/ThemeToogleIcon";
+import { useRouter } from "next/navigation";
 
 const genAI = new GoogleGenerativeAI(
   process.env.NEXT_PUBLIC_GEMINI_API_KEY as string
@@ -56,6 +57,9 @@ export default function Test() {
   const keyPressAudios = useRef<HTMLAudioElement[]>([]);
   const keyReturnAudio = useRef<HTMLAudioElement | null>(null);
   const [errors, setErrors] = useState(0);
+  const [detailedErrors, setDetailedErrors] = useState<
+    Array<{ char: string; expected: string; position: number }>
+  >([]);
 
   useEffect(() => {
     if (isCountingDown && countdown > 0) {
@@ -169,14 +173,46 @@ export default function Test() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const newErrors = value.split("").reduce((acc, char, index) => {
+    const newErrors: Array<{
+      char: string;
+      expected: string;
+      position: number;
+    }> = [];
+    let errorCount = 0;
+
+    value.split("").forEach((char, index) => {
       if (char !== sentence[index]) {
-        return acc + 1;
+        errorCount++;
+        newErrors.push({ char, expected: sentence[index], position: index });
       }
-      return acc;
-    }, 0);
-    setErrors(newErrors);
+    });
+
+    setErrors(errorCount);
+    setDetailedErrors(newErrors);
     setInput(value);
+  };
+
+  const router = useRouter();
+
+  // const goToAnalysis = () => {
+  //   localStorage.setItem(
+  //     "typingTestData",
+  //     JSON.stringify({
+  //       wpm,
+  //       accuracy: Math.max(0, 100 - (errors / input.length) * 100).toFixed(2),
+  //       detailedErrors,
+  //     })
+  //   );
+  //   router.push("/analysis");
+  // };
+
+  const goToAnalysis = () => {
+    localStorage.setItem('typingTestData', JSON.stringify({
+      wpm,
+      accuracy: parseFloat(Math.max(0, 100 - (errors / input.length) * 100).toFixed(2)),
+      detailedErrors
+    }));
+    router.push('/analysis');
   };
 
   const renderSentence = () => {
@@ -208,12 +244,18 @@ export default function Test() {
           <p className="text-xl text-gray-600 mb-6">
             Great job! You've completed the typing test.
           </p>
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center space-x-4 mt-4">
             <button
               className={`py-2 px-4 rounded ${theme.button} text-lg`}
               onClick={startCountdown}
             >
               Try Again
+            </button>
+            <button
+              className="bg-green-500 text-white py-2 px-4 rounded text-lg font-semibold hover:bg-green-600 transition duration-300 transform hover:scale-105"
+              onClick={goToAnalysis}
+            >
+              Detailed Analysis
             </button>
             <Link
               href="/"
