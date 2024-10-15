@@ -87,7 +87,10 @@ export default function Test() {
 
   useEffect(() => {
     const words = sentence.split(" ");
-    const inputWords = input.trim().split(" ");
+    const inputWords = input
+      .trim()
+      .split(" ")
+      .filter((word) => word !== "");
     let completedWordCount = 0;
 
     for (let i = 0; i < inputWords.length; i++) {
@@ -101,7 +104,7 @@ export default function Test() {
     setCompletedWords(completedWordCount);
 
     if (input.trim() === sentence.trim()) {
-      setTotalWords(totalWords + completedWordCount);
+      setTotalWords(totalWords + completedWordCount); 
       setIsLoading(true);
       generateRandomSentence().then((newSentence) => {
         setSentence(newSentence);
@@ -109,6 +112,9 @@ export default function Test() {
       });
       setInput("");
       setCompletedWords(0);
+    } else {
+      
+      setTotalWords(inputWords.length); 
     }
   }, [input, sentence]);
 
@@ -194,25 +200,18 @@ export default function Test() {
 
   const router = useRouter();
 
-  // const goToAnalysis = () => {
-  //   localStorage.setItem(
-  //     "typingTestData",
-  //     JSON.stringify({
-  //       wpm,
-  //       accuracy: Math.max(0, 100 - (errors / input.length) * 100).toFixed(2),
-  //       detailedErrors,
-  //     })
-  //   );
-  //   router.push("/analysis");
-  // };
-
   const goToAnalysis = () => {
-    localStorage.setItem('typingTestData', JSON.stringify({
-      wpm,
-      accuracy: parseFloat(Math.max(0, 100 - (errors / input.length) * 100).toFixed(2)),
-      detailedErrors
-    }));
-    router.push('/analysis');
+    localStorage.setItem(
+      "typingTestData",
+      JSON.stringify({
+        wpm,
+        accuracy: parseFloat(
+          Math.max(0, 100 - (errors / input.length) * 100).toFixed(2)
+        ),
+        detailedErrors,
+      })
+    );
+    router.push("/analysis");
   };
 
   const renderSentence = () => {

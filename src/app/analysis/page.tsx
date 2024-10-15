@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Line, Doughnut } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -11,6 +11,7 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement, 
 } from "chart.js";
 import Layout from "@/components/Layout";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -22,7 +23,8 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
-  LineElement
+  LineElement,
+  BarElement 
 );
 
 interface TestData {
@@ -49,6 +51,20 @@ export default function Analysis() {
       generateAIRecommendations(data);
     }
   }, []);
+
+  const getMostCommonErrors = (errors: TestData["detailedErrors"]) => {
+    const errorCount = errors.reduce(
+      (acc: { [key: string]: number }, error) => {
+        acc[error.expected] = (acc[error.expected] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+    return Object.entries(errorCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([char, count]) => ({ char, count }));
+  };
 
   const generateAIRecommendations = async (data: TestData) => {
     setAiError(null);
@@ -90,21 +106,20 @@ export default function Analysis() {
 
   const { wpm, accuracy, detailedErrors } = testData;
 
-  const getMostCommonErrors = (errors: TestData["detailedErrors"]) => {
-    const errorCount = errors.reduce(
-      (acc: { [key: string]: number }, error) => {
-        acc[error.expected] = (acc[error.expected] || 0) + 1;
-        return acc;
-      },
-      {}
-    );
-    return Object.entries(errorCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([char, count]) => ({ char, count }));
-  };
-
   const commonErrors = getMostCommonErrors(detailedErrors);
+
+  const barData = {
+    labels: commonErrors.map((e) => e.char),
+    datasets: [
+      {
+        label: "Error Count",
+        data: commonErrors.map((e) => e.count),
+        backgroundColor: "rgba(75, 192, 192, 0.6)",
+        borderColor: "rgba(75, 192, 192, 1)",
+        borderWidth: 1,
+      },
+    ],
+  };
 
   const lineData = {
     labels: ["WPM", "Accuracy (%)"],
@@ -120,23 +135,6 @@ export default function Analysis() {
         data: [40, 95], // Example average values
         borderColor: "rgba(255, 99, 132, 1)",
         tension: 0.1,
-      },
-    ],
-  };
-
-  const doughnutData = {
-    labels: commonErrors.map((e) => e.char),
-    datasets: [
-      {
-        data: commonErrors.map((e) => e.count),
-        backgroundColor: [
-          "#FF6384",
-          "#36A2EB",
-          "#FFCE56",
-          "#4BC0C0",
-          "#9966FF",
-        ],
-        hoverOffset: 4,
       },
     ],
   };
@@ -158,29 +156,47 @@ export default function Analysis() {
 
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4">Most Common Errors</h2>
-            <div className="h-64">
-              <Doughnut
-                data={doughnutData}
-                options={{ maintainAspectRatio: false }}
-              />
-            </div>
+            {commonErrors.length > 0 ? (
+              <div className="h-64">
+                <Bar data={barData} options={{ maintainAspectRatio: false }} />
+              </div>
+            ) : (
+              <p className="text-gray-600">No common errors to display.</p>
+            )}
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold mb-4">
-            AI-Powered Recommendations  
+            AI-Powered Recommendations
           </h2>
           {aiError ? (
             <p className="text-red-500">{aiError}</p>
           ) : aiRecommendations.length > 0 ? (
-            <ul className="list-disc list-inside space-y-2">
+            <div className="space-y-4">
               {aiRecommendations.map((recommendation, index) => (
-                <li key={index} className="text-gray-700">
-                  {recommendation}
-                </li>
+                <div
+                  key={index}
+                  className="flex items-start p-4 border border-gray-300 rounded-lg shadow-sm bg-gray-50"
+                >
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M10 15l-5-5h3V5h4v5h3l-5 5z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-gray-700">
+                      <strong>{recommendation.split(":")[0]}:</strong>{" "}
+                      {recommendation.split(":").slice(1).join(":").trim()}
+                    </p>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           ) : (
             <p className="text-gray-600">Generating recommendations...</p>
           )}
