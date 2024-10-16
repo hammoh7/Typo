@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -71,32 +71,32 @@ export default function Test() {
     }
   }, [isCountingDown, countdown]);
 
-  const calculateFinalWpm = () => {
+  const calculateFinalWpm = useCallback(() => {
     if (startTime) {
       const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
       const finalWords = totalWords;
       setWpm(Math.round(finalWords / timeElapsed));
     }
-  };
+  }, [startTime, totalWords]);
 
-  const calculateFinalWpmRef = useRef(calculateFinalWpm);
-  useEffect(() => {
-    calculateFinalWpmRef.current = calculateFinalWpm;
-  }, [calculateFinalWpm]);
+  // const calculateFinalWpmRef = useRef(calculateFinalWpm);
+  // useEffect(() => {
+  //   calculateFinalWpmRef.current = calculateFinalWpm;
+  // }, [calculateFinalWpm]);
 
   useEffect(() => {
     if (isStarted && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     } else if (timeLeft === 0) {
       setIsStarted(false);
-      calculateFinalWpmRef.current();
+      calculateFinalWpm();  // Call the memoized function directly here
     }
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [isStarted, timeLeft]);
+  }, [isStarted, timeLeft, calculateFinalWpm]); 
 
   useEffect(() => {
     const words = sentence.split(" ");
