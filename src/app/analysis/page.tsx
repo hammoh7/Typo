@@ -11,10 +11,11 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  BarElement, 
+  BarElement,
 } from "chart.js";
 import Layout from "@/components/Layout";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Link from "next/link";
 
 ChartJS.register(
   ArcElement,
@@ -24,7 +25,7 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
-  BarElement 
+  BarElement
 );
 
 interface TestData {
@@ -33,7 +34,6 @@ interface TestData {
   detailedErrors: Array<{ char: string; expected: string; position: number }>;
 }
 
-// Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(
   process.env.NEXT_PUBLIC_GEMINI_API_KEY as string
 );
@@ -42,15 +42,6 @@ export default function Analysis() {
   const [testData, setTestData] = useState<TestData | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
-
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("typingTestData") || "null");
-    setTestData(data);
-
-    if (data) {
-      generateAIRecommendations(data);
-    }
-  }, []);
 
   const getMostCommonErrors = (errors: TestData["detailedErrors"]) => {
     const errorCount = errors.reduce(
@@ -77,32 +68,38 @@ export default function Analysis() {
     )}
     Provide concise, actionable advice.`;
 
-    console.log("Sending prompt to AI:", prompt);
+    console.log("Sending prompt to AI:", prompt); // Log the prompt
 
     try {
       const result = await model.generateContent(prompt);
-      console.log("AI response received:", result);
       const response = await result.response;
-      const text = response.text();
-      console.log("AI text response:", text);
+      const text = await response.text();
       const recommendations = text.split("\n").filter((r) => r.trim() !== "");
-      console.log("Parsed recommendations:", recommendations);
       setAiRecommendations(recommendations);
     } catch (error) {
       console.error("Error generating AI recommendations:", error);
-      setAiError(
-        "Unable to generate AI recommendations. Please try again later."
-      );
+      setAiError("Unable to generate AI recommendations. Please try again later.");
       setAiRecommendations([]);
     }
   };
 
-  if (!testData)
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem("typingTestData") || "null");
+    console.log("Loaded test data:", data); // Log the loaded data
+    setTestData(data);
+
+    if (data) {
+      generateAIRecommendations(data);
+    }
+  }, []);
+
+  if (!testData) {
     return (
       <div className="flex justify-center items-center h-screen">
         Loading...
       </div>
     );
+  }
 
   const { wpm, accuracy, detailedErrors } = testData;
 
@@ -142,9 +139,7 @@ export default function Analysis() {
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Your Typing Analysis
-        </h1>
+        <h1 className="text-3xl font-bold mb-6 text-center">Your Typing Analysis</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md">
@@ -166,10 +161,17 @@ export default function Analysis() {
           </div>
         </div>
 
+        <div>
+          <Link
+            href="/"
+            className="bg-gray-200 text-gray-800 py-3 px-6 rounded-full text-lg font-semibold hover:bg-gray-300 transition duration-300 transform hover:scale-105"
+          >
+            Home
+          </Link>
+        </div>
+
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">
-            AI-Powered Recommendations
-          </h2>
+          <h2 className="text-xl font-semibold mb-4">AI-Powered Recommendations</h2>
           {aiError ? (
             <p className="text-red-500">{aiError}</p>
           ) : aiRecommendations.length > 0 ? (

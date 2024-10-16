@@ -71,6 +71,14 @@ export default function Test() {
     }
   }, [isCountingDown, countdown]);
 
+  const calculateFinalWpm = () => {
+    if (startTime) {
+      const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
+      const finalWords = totalWords + completedWords;
+      setWpm(Math.round(finalWords / timeElapsed));
+    }
+  };
+
   useEffect(() => {
     if (isStarted && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -104,7 +112,7 @@ export default function Test() {
     setCompletedWords(completedWordCount);
 
     if (input.trim() === sentence.trim()) {
-      setTotalWords(totalWords + completedWordCount); 
+      setTotalWords((prevTotal) => prevTotal + completedWordCount); // Updated to use functional update
       setIsLoading(true);
       generateRandomSentence().then((newSentence) => {
         setSentence(newSentence);
@@ -113,7 +121,6 @@ export default function Test() {
       setInput("");
       setCompletedWords(0);
     } else {
-      
       setTotalWords(inputWords.length); 
     }
   }, [input, sentence]);
@@ -143,14 +150,6 @@ export default function Test() {
     setTotalWords(0);
     setCompletedWords(0);
     setStartTime(new Date());
-  };
-
-  const calculateFinalWpm = () => {
-    if (startTime) {
-      const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
-      const finalWords = totalWords + completedWords;
-      setWpm(Math.round(finalWords / timeElapsed));
-    }
   };
 
   const playKeySound = (key: string) => {
