@@ -74,17 +74,22 @@ export default function Test() {
   const calculateFinalWpm = () => {
     if (startTime) {
       const timeElapsed = (new Date().getTime() - startTime.getTime()) / 60000;
-      const finalWords = totalWords + completedWords;
+      const finalWords = totalWords;
       setWpm(Math.round(finalWords / timeElapsed));
     }
   };
+
+  const calculateFinalWpmRef = useRef(calculateFinalWpm);
+  useEffect(() => {
+    calculateFinalWpmRef.current = calculateFinalWpm;
+  }, [calculateFinalWpm]);
 
   useEffect(() => {
     if (isStarted && timeLeft > 0) {
       timerRef.current = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     } else if (timeLeft === 0) {
       setIsStarted(false);
-      calculateFinalWpm();
+      calculateFinalWpmRef.current();
     }
     return () => {
       if (timerRef.current) {
@@ -101,27 +106,30 @@ export default function Test() {
       .filter((word) => word !== "");
     let completedWordCount = 0;
 
+    // Count how many words are correct
     for (let i = 0; i < inputWords.length; i++) {
       if (inputWords[i] === words[i]) {
         completedWordCount++;
       } else {
-        break;
+        break; // Stop counting if a word is incorrect
       }
     }
 
     setCompletedWords(completedWordCount);
 
+    // Update total words only when the sentence is completed
     if (input.trim() === sentence.trim()) {
-      setTotalWords((prevTotal) => prevTotal + completedWordCount); // Updated to use functional update
+      setTotalWords((prevTotal) => prevTotal + completedWordCount);
       setIsLoading(true);
       generateRandomSentence().then((newSentence) => {
         setSentence(newSentence);
         setIsLoading(false);
       });
-      setInput("");
-      setCompletedWords(0);
+      setInput(""); // Clear input for the new sentence
+      setCompletedWords(0); // Reset completed words for the new sentence
     } else {
-      setTotalWords(inputWords.length); 
+      // Update total words based on input
+      setTotalWords(completedWordCount); // Update total words in real-time
     }
   }, [input, sentence]);
 
@@ -152,48 +160,8 @@ export default function Test() {
     setStartTime(new Date());
   };
 
-  const playKeySound = (key: string) => {
-    if (key === "Enter" || key === " ") {
-      if (keyReturnAudio.current) {
-        keyReturnAudio.current.currentTime = 0;
-        keyReturnAudio.current.play();
-      }
-    } else {
-      const randomIndex = Math.floor(
-        Math.random() * keyPressAudios.current.length
-      );
-      const audio = keyPressAudios.current[randomIndex];
-      if (audio) {
-        audio.currentTime = 0;
-        audio.play();
-      }
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isStarted && !isLoading) {
-      playKeySound(e.key);
-    }
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const newErrors: Array<{
-      char: string;
-      expected: string;
-      position: number;
-    }> = [];
-    let errorCount = 0;
-
-    value.split("").forEach((char, index) => {
-      if (char !== sentence[index]) {
-        errorCount++;
-        newErrors.push({ char, expected: sentence[index], position: index });
-      }
-    });
-
-    setErrors(errorCount);
-    setDetailedErrors(newErrors);
     setInput(value);
   };
 
@@ -240,7 +208,7 @@ export default function Test() {
           </h2>
           <div className="text-6xl font-bold text-blue-600 mb-4">{wpm} WPM</div>
           <p className="text-xl text-gray-600 mb-6">
-            Great job! You've completed the typing test.
+            Great job! You&apos;ve completed the typing test.
           </p>
           <div className="flex justify-center space-x-4 mt-4">
             <button
@@ -323,7 +291,6 @@ export default function Test() {
                   type="text"
                   value={input}
                   onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
                   className="border-2 border-blue-300 p-4 w-full rounded-lg mb-6 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
                   placeholder="Start typing..."
                   disabled={!isStarted || isLoading}
